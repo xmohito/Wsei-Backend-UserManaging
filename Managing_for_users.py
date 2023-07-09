@@ -7,7 +7,7 @@ from DbConn import conn_to_db
 from passlib.hash import pbkdf2_sha256
 import psycopg2.extras
 
-# Create Flask app````
+# Create Flask app
 app = Flask(__name__)
 api.init_app(app)
 CORS(app)
@@ -47,9 +47,10 @@ class UserResource(Resource):
             )
             role_id=cursor.fetchone()
             if not role_id:
-                return {"success": False, "msg": "This role doesn't exists."}
+                return {"success": False, "msg": "This role doesn't exist."}
             
             # Assign the selected role to the user
+            role_id=role_id[0]
             cursor.execute(
                 "INSERT INTO user_roles (user_id, role_id) VALUES (%s, %s)",
                 (user_id, role_id)
@@ -71,7 +72,7 @@ class UserResource(Resource):
 
 @api.route('/api/delete-user')
 class DeleteUser(Resource):
-    def post():
+    def post(self):
         try:
             # Create a cursor object to interact with the database
             conn=conn_to_db()
@@ -80,14 +81,14 @@ class DeleteUser(Resource):
             user_id=req_data.get("id_user")
 
             cursor.execute(
-                "SELECT * from users WHERE id =%s",(user_id,)
+                "SELECT * from users WHERE id =%s and deleted=false",(user_id,)
             )
             userexistcheck=cursor.fetchone()
             if not userexistcheck:
-                return {"success": False, "msg": "This username doesn't exists."}
+                return {"success": False, "msg": "This username is terminated"}
             # Execute the DELETE statement
             cursor.execute("DELETE FROM user_roles WHERE user_id = %s", (user_id,))
-            cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+            cursor.execute("UPDATE users set deleted=true WHERE id = %s", (user_id,))
 
             # Commit the transaction
             conn.commit()
@@ -106,7 +107,7 @@ class DeleteUser(Resource):
             
 @api.route('/api/list-users')
 class UserList(Resource):
-    def get():
+    def get(self):
         try:
             # Create a cursor object to interact with the database
             conn=conn_to_db()
