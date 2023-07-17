@@ -7,10 +7,27 @@ from DbConn import conn_to_db
 from passlib.hash import pbkdf2_sha256
 import psycopg2.extras
 
-# Create Flask app
+# Create Flask app````
 app = Flask(__name__)
 api.init_app(app)
 CORS(app)
+
+
+def test_db_connection():
+    try:
+        conn = conn_to_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1")
+        result = cursor.fetchone()
+        print("Połączenie z bazą danych działa poprawnie!")
+        cursor.close()
+        conn.close()
+    except (Exception, psycopg2.Error) as error:
+        print("Błąd podczas połączenia z bazą danych:", error)
+
+# Wywołaj funkcję test_db_connection przed uruchomieniem serwera
+test_db_connection()
+
 @api.route('/api/add-user')
 class UserResource(Resource):
     @api.expect(user_model)
@@ -45,12 +62,11 @@ class UserResource(Resource):
             cursor.execute(
                 "SELECT id from roles WHERE role = %s",(userrole,)
             )
-            role_id=cursor.fetchone()
+            role_id=cursor.fetchone()[0]
             if not role_id:
-                return {"success": False, "msg": "This role doesn't exist."}
+                return {"success": False, "msg": "This role doesn't exists."}
             
             # Assign the selected role to the user
-            role_id=role_id[0]
             cursor.execute(
                 "INSERT INTO user_roles (user_id, role_id) VALUES (%s, %s)",
                 (user_id, role_id)
@@ -81,14 +97,14 @@ class DeleteUser(Resource):
             user_id=req_data.get("id_user")
 
             cursor.execute(
-                "SELECT * from users WHERE id =%s and deleted=false",(user_id,)
+                "SELECT * from users WHERE id =%s",(user_id,)
             )
             userexistcheck=cursor.fetchone()
             if not userexistcheck:
-                return {"success": False, "msg": "This username is terminated"}
+                return {"success": False, "msg": "This username doesn't exists."}
             # Execute the DELETE statement
             cursor.execute("DELETE FROM user_roles WHERE user_id = %s", (user_id,))
-            cursor.execute("UPDATE users set deleted=true WHERE id = %s", (user_id,))
+            cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
 
             # Commit the transaction
             conn.commit()
